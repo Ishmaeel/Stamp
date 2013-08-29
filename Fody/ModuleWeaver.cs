@@ -5,6 +5,7 @@ using System.Linq;
 using Mono.Cecil;
 using SharpSvn;
 using System.Collections.ObjectModel;
+using System.Reflection;
 
 public class ModuleWeaver
 {
@@ -20,11 +21,35 @@ public class ModuleWeaver
     Version assemblyVersion;
     bool dotGitDirExists;
 
+    Assembly sharpSvn;
+    Assembly sharpSvnUI;
+
     public ModuleWeaver()
     {
         LogInfo = s => { };
         LogWarning = s => { };
         formatStringTokenResolver = new FormatStringTokenResolver();
+
+        AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+
+        sharpSvn = typeof(SharpSvn.SvnWorkingCopyClient).Assembly;
+        sharpSvnUI = typeof(SharpSvn.UI.SvnUI).Assembly;
+
+        LogInfo(sharpSvn.FullName);
+        LogInfo(sharpSvnUI.FullName);
+    }
+
+    System.Reflection.Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+    {
+        LogInfo(args.Name);
+
+        if (args.Name == sharpSvn.FullName)
+            return sharpSvn;
+
+        if (args.Name == sharpSvnUI.FullName)
+            return sharpSvnUI;
+
+        return null;
     }
 
     public void Execute()
