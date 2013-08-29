@@ -2,8 +2,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using LibGit2Sharp;
 using Mono.Cecil;
+using SharpSvn;
+using System.Collections.ObjectModel;
 
 public class ModuleWeaver
 {
@@ -31,49 +32,111 @@ public class ModuleWeaver
         SetSearchPath();
         var customAttributes = ModuleDefinition.Assembly.CustomAttributes;
 
-        var gitDir = GitDirFinder.TreeWalkForGitDir(SolutionDirectoryPath);
-        if (gitDir == null)
+        var svnDir = SvnDirFinder.TreeWalkForSvnDir(SolutionDirectoryPath);
+        if (svnDir == null)
         {
-            LogWarning("No .git directory found.");
+            LogWarning("No .svn directory found.");
             return;
         }
         dotGitDirExists = true;
 
-        using (var repo = GetRepo(gitDir))
+        VersionInfo ver = null;
+        try
         {
-            var branch = repo.Head;
-            if (branch.Tip == null)
-            {
-                LogWarning("No Tip found. Has repo been initialize?");
-                return;
-            }
-            assemblyVersion = ModuleDefinition.Assembly.Name.Version;
+            ver = GetSvnInfo(svnDir);
+        }
+        catch (Exception ex)
+        {
+            LogWarning("Svn error: " + ex.ToString());
+        }
 
-            var customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyInformationalVersionAttribute");
-            if (customAttribute != null)
+
+        assemblyVersion = ModuleDefinition.Assembly.Name.Version;
+
+        /* AssemblyVersionAttribute */
+        var customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyVersionAttribute");
+        if (customAttribute != null)
+        {
+            assemblyInfoVersion = (string)customAttribute.ConstructorArguments[0].Value;
+            assemblyInfoVersion = ReplaceVersion3rd(assemblyInfoVersion, ver.Revision);
+            VerifyStartsWithVersion(assemblyInfoVersion);
+            customAttribute.ConstructorArguments[0] = new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion);
+        }
+        else
+        {
+            var versionAttribute = GetVersionAttribute();
+            var constructor = ModuleDefinition.Import(versionAttribute.Methods.First(x => x.IsConstructor));
+            customAttribute = new CustomAttribute(constructor);
+
+            assemblyInfoVersion = (string)customAttribute.ConstructorArguments[0].Value;
+            assemblyInfoVersion = ReplaceVersion3rd(assemblyInfoVersion, ver.Revision);
+
+            customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
+            customAttributes.Add(customAttribute);
+        }
+
+        /* AssemblyFileVersionAttribute */
+        customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyFileVersionAttribute");
+        if (customAttribute != null)
+        {
+            assemblyInfoVersion = (string)customAttribute.ConstructorArguments[0].Value;
+            assemblyInfoVersion = ReplaceVersion3rd(assemblyInfoVersion, ver.Revision);
+            VerifyStartsWithVersion(assemblyInfoVersion);
+            customAttribute.ConstructorArguments[0] = new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion);
+        }
+        else
+        {
+            var versionAttribute = GetVersionAttribute();
+            var constructor = ModuleDefinition.Import(versionAttribute.Methods.First(x => x.IsConstructor));
+            customAttribute = new CustomAttribute(constructor);
+
+            assemblyInfoVersion = (string)customAttribute.ConstructorArguments[0].Value;
+            assemblyInfoVersion = ReplaceVersion3rd(assemblyInfoVersion, ver.Revision);
+
+            customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
+            customAttributes.Add(customAttribute);
+        }
+
+        /* AssemblyInformationalVersionAttribute */
+        customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyInformationalVersionAttribute");
+        if (customAttribute != null)
+        {
+            assemblyInfoVersion = (string)customAttribute.ConstructorArguments[0].Value;
+            assemblyInfoVersion = formatStringTokenResolver.ReplaceTokens(assemblyInfoVersion, ModuleDefinition, ver);
+            VerifyStartsWithVersion(assemblyInfoVersion);
+            customAttribute.ConstructorArguments[0] = new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion);
+        }
+        else
+        {
+            var versionAttribute = GetVersionAttribute();
+            var constructor = ModuleDefinition.Import(versionAttribute.Methods.First(x => x.IsConstructor));
+            customAttribute = new CustomAttribute(constructor);
+            if (!ver.HasChanges)
             {
-                assemblyInfoVersion = (string) customAttribute.ConstructorArguments[0].Value;
-                assemblyInfoVersion = formatStringTokenResolver.ReplaceTokens(assemblyInfoVersion, ModuleDefinition, repo);
-                VerifyStartsWithVersion(assemblyInfoVersion);
-                customAttribute.ConstructorArguments[0] = new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion);
+                assemblyInfoVersion = string.Format("{0} Path:'{1}' Rev:{2}", assemblyVersion, ver.BranchName, ver.Revision);
             }
             else
             {
-                var versionAttribute = GetVersionAttribute();
-                var constructor = ModuleDefinition.Import(versionAttribute.Methods.First(x => x.IsConstructor));
-                customAttribute = new CustomAttribute(constructor);
-                if (repo.IsClean())
-                {
-                    assemblyInfoVersion = string.Format("{0} Head:'{1}' Sha:{2}", assemblyVersion, repo.Head.Name, branch.Tip.Sha);
-                }
-                else
-                {
-                    assemblyInfoVersion = string.Format("{0} Head:'{1}' Sha:{2} HasPendingChanges", assemblyVersion, repo.Head.Name, branch.Tip.Sha);
-                }
-                customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
-                customAttributes.Add(customAttribute);
+                assemblyInfoVersion = string.Format("{0} Path:'{1}' Rev:{2} HasPendingChanges", assemblyVersion, ver.BranchName, ver.Revision);
             }
+            customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
+            customAttributes.Add(customAttribute);
         }
+
+
+    }
+
+    private string ReplaceVersion3rd(string versionString, int rev)
+    {
+        Version fake;
+        if (!Version.TryParse(assemblyInfoVersion, out fake))
+        {
+            throw new WeavingException("The version string must be prefixed with a valid Version. The following string does not: " + versionString);
+        }
+
+        var ret = new Version(fake.Major, fake.Minor, rev, fake.Revision);
+
+        return ret.ToString();
     }
 
     void VerifyStartsWithVersion(string versionString)
@@ -86,20 +149,26 @@ public class ModuleWeaver
         }
     }
 
-    static Repository GetRepo(string gitDir)
+    static VersionInfo GetSvnInfo(string targetFolder)
     {
-        try
+        SvnWorkingCopyVersion version;
+        using (SvnWorkingCopyClient client = new SvnWorkingCopyClient())
         {
-            return new Repository(gitDir);
+            client.GetVersion(targetFolder, out version);
         }
-        catch (Exception exception)
+
+        SvnInfoEventArgs info;
+        using (SvnClient client = new SvnClient())
         {
-            if (exception.Message.Contains("LibGit2Sharp.Core.NativeMethods") || exception.Message.Contains("FilePathMarshaler"))
-            {
-                throw new WeavingException("Restart of Visual Studio required due to update of 'Stamp.Fody'.");
-            }
-            throw;
+            client.GetInfo(targetFolder, out info);
         }
+
+        return new VersionInfo()
+        {
+            BranchName = info.Uri.AbsolutePath,
+            HasChanges = version.Modified,
+            Revision = (int)version.End,
+        };
     }
 
     void SetSearchPath()

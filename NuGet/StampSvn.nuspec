@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>StampSvn.Fody</id>
+    <version>$version$</version>
+    <title>StampSvn.Fody</title>
+    <authors>Simon Cropp, Kerem Kat</authors>
+    <owners>Simon Cropp</owners>
+    <licenseUrl>http://www.opensource.org/licenses/mit-license.php</licenseUrl>
+    <projectUrl>http://github.com/krk/Stamp</projectUrl>
+    <iconUrl>https://raw.github.com/Fody/Stamp/master/Icons/package_icon.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Stamps an assembly with svn information.</description>
+    <language>en-US</language>
+    <tags>Svn, Versioning, ILWeaving, Fody, Stamp, StampSvn, Cecil</tags>
+    <dependencies>
+      <dependency id="Fody"/>
+    </dependencies>
+  </metadata>
+</package>
