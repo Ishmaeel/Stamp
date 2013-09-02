@@ -30,30 +30,30 @@ public class ModuleWeaver
         LogWarning = s => { };
         formatStringTokenResolver = new FormatStringTokenResolver();
 
+        LogWarning(sharpSvn.FullName);
+        LogWarning(sharpSvnUI.FullName);        
+
         AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-
-        sharpSvn = typeof(SharpSvn.SvnWorkingCopyClient).Assembly;
-        sharpSvnUI = typeof(SharpSvn.UI.SvnUI).Assembly;
-
-        LogInfo(sharpSvn.FullName);
-        LogInfo(sharpSvnUI.FullName);
     }
 
     System.Reflection.Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
     {
-        LogInfo(args.Name);
+        sharpSvn = typeof(SharpSvn.SvnWorkingCopyClient).Assembly;
+        sharpSvnUI = typeof(SharpSvn.UI.SvnUI).Assembly;
 
-        if (args.Name == sharpSvn.FullName)
+        LogWarning(args.Name);
+
+        if (sharpSvn != null && args.Name == sharpSvn.FullName)
             return sharpSvn;
 
-        if (args.Name == sharpSvnUI.FullName)
+        if (sharpSvnUI != null && args.Name == sharpSvnUI.FullName)
             return sharpSvnUI;
 
         return null;
     }
 
     public void Execute()
-    {
+    {        
         SetSearchPath();
         var customAttributes = ModuleDefinition.Assembly.CustomAttributes;
 

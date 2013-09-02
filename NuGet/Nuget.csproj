@@ -32,9 +32,9 @@
     <MakeDir Directories="$(SolutionDir)NuGetBuild" />
     
     <Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\StampSvn.Fody.dll" DestinationFolder="$(SolutionDir)NuGetBuild" />
-    <Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\SharpSvn.dll" DestinationFolder="$(SolutionDir)NuGetBuild" />
+    <!--<Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\SharpSvn.dll" DestinationFolder="$(SolutionDir)NuGetBuild" />
     <Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\SharpSvn.UI.dll" DestinationFolder="$(SolutionDir)NuGetBuild" />
-    <Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\SharpPlink-x64.svnExe" DestinationFolder="$(SolutionDir)NuGetBuild" />
+    <Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\SharpPlink-x64.svnExe" DestinationFolder="$(SolutionDir)NuGetBuild" />-->
 
     <Copy SourceFiles="$(SolutionDir)Lib\Verpatch\verpatch.exe" DestinationFolder="$(SolutionDir)NuGetBuild\" />
     <Copy SourceFiles="$(SolutionDir)NuGet\Fody_ToBeDeleted.txt" DestinationFolder="$(SolutionDir)NuGetBuild\Content" />
