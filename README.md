@@ -2,29 +2,33 @@
 
 ### This is an add-in for [Fody](https://github.com/Fody/Fody/) 
 
-Stamps an assembly with git data.
+Stamps an assembly with svn data.
 
 ### Nuget package
 
-Available here http://nuget.org/packages/Stamp.Fody 
+Available here http://nuget.org/packages/StampSvn.Fody 
 
 To Install from the Nuget Package Manager Console 
     
-    PM> Install-Package Stamp.Fody
+    PM> Install-Package StampSvn.Fody
 
 ## What it does 
 
-Extracts the git information from disk, combines it with the assembly version, and places it in the `AssemblyInformationalVersionAttribute`.
+AssemblyVersion and AssemblyFileVersion is rewritten so that they contain svn revision number as their 'revision' fields.
 
-So if your assembly version is 1.0.0.0, the working branch is "master" and the last commit is 759e9ddb53271dfa9335a3b27e452749a9b22280 then the following attribute will be added to the assembly.
+1.0.0.0 becomes 1.0.{svnRev}.0
 
-    [assembly: AssemblyInformationalVersion("1.0.0.0 Head:'master' Sha:759e9ddb53271dfa9335a3b27e452749a9b22280")]
+Extracts the svn information from disk, combines it with the assembly version, and places it in the `AssemblyInformationalVersionAttribute`.
 
+So if your assembly version is 1.0.0.0, the working path is "/repo/branches/F101" and the last commit is 850 and you have pending changes then the following attribute will be added to the assembly.
+
+	[assembly: AssemblyInformationalVersion("1.0.850.0 Path:'/repo/branches/F101' Rev:850 HasPendingChanges")]
+	
 ## Templating the version
 
-You can customize the string used in the `AssemblyInformationalVersionAttribute` by adding some tokens to the string, which Stamp will replace.
+You can customize the string used in the `AssemblyInformationalVersionAttribute` by adding some tokens to the string, which StampSvn will replace.
 
-For example, if you add `[assembly: AssemblyInformationalVersion("%version% Branch=%branch%")]` then Stamp will change it to `[assembly: AssemblyInformationalVersion("1.0.0.0 Branch=master")]`
+For example, if you add `[assembly: AssemblyInformationalVersion("%version% Branch=%branch%")]` then StampSvn will change it to `[assembly: AssemblyInformationalVersion("1.0.850.0 Branch=/repo/branches/F101")]`
 
 The tokens are:
 - `%version%` is replaced with the version (1.0.0.0)
@@ -32,9 +36,11 @@ The tokens are:
 - `%version2%` is replaced with the major and minor version (1.0)
 - `%version3%` is replaced with the major, minor, and revision version (1.0.0)
 - `%version4%` is replaced with the major, minor, revision, and build version (1.0.0.0)
-- `%githash%` is replaced with the SHA1 hash of the branch tip of the repository
+- `%revno%` is replaced with the largest svn revision number in the repository
 - `%branch%` is replaced with the branch name of the repository
 - `%haschanges%` is replaced with the string "HasChanges" if the repository is dirty, else a blank string
+- `%user%` is replaced with the username of MSBuild process
+- `%machine%` is replaced with Environment.MachineName
 
 ## Icon
 
