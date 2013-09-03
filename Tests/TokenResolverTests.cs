@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using LibGit2Sharp;
 using Mono.Cecil;
 using NUnit.Framework;
 
@@ -23,12 +22,11 @@ public class TokenResolverTests
         resolver = new FormatStringTokenResolver();
     }
 
-    void DoWithCurrentRepo(Action<Repository> doWithRepo)
+    void DoWithCurrentRepo(Action<VersionInfo> doWithVer)
     {
-        using (var repo = new Repository(GitDirFinder.TreeWalkForGitDir(Environment.CurrentDirectory)))
-        {
-            if (doWithRepo != null) doWithRepo(repo);
-        }
+        var version = new MockSvnHelper().GetSvnInfo(Environment.CurrentDirectory);
+
+        if (doWithVer != null) doWithVer(version);
     }
 
     [Test]
@@ -91,24 +89,11 @@ public class TokenResolverTests
     {
         DoWithCurrentRepo(repo =>
             {
-                var branchName = repo.Head.Name;
+                var branchName = repo.BranchName;
 
                 var result = resolver.ReplaceTokens("%branch%", moduleDefinition, repo);
 
                 Assert.AreEqual(branchName, result);
-            });
-    }
-
-    [Test]
-    public void Replace_githash()
-    {
-        DoWithCurrentRepo(repo =>
-            {
-                var sha = repo.Head.Tip.Sha;
-
-                var result = resolver.ReplaceTokens("%githash%", moduleDefinition, repo);
-
-                Assert.AreEqual(sha, result);
             });
     }
 
@@ -119,7 +104,7 @@ public class TokenResolverTests
             {
                 var result = resolver.ReplaceTokens("%haschanges%", moduleDefinition, repo);
 
-                if (repo.IsClean())
+                if (!repo.HasChanges)
                 {
                     Assert.AreEqual(string.Empty, result);
                 }

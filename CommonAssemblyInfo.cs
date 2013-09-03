@@ -2,5 +2,5 @@
 
 [assembly: AssemblyTitle("StampSvn")]
 [assembly: AssemblyProduct("StampSvn")]
-[assembly: AssemblyVersion("0.7.6.24")]
-[assembly: AssemblyFileVersion("0.7.6.24")]
+[assembly: AssemblyVersion("0.7.6.25")]
+[assembly: AssemblyFileVersion("0.7.6.25")]

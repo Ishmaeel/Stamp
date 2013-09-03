@@ -72,8 +72,9 @@
   <ItemGroup>
     <Compile Include="EnumerableEx.cs" />
     <Compile Include="FormatStringTokenResolver.cs" />
+    <Compile Include="ISvnHelper.cs" />
     <Compile Include="ResourceExtractor.cs" />
-    <Compile Include="SvnDirFinder.cs" />
+    <Compile Include="SvnHelper.cs" />
     <Compile Include="ModuleWeaver.cs" />
     <Compile Include="..\CommonAssemblyInfo.cs" />
     <Compile Include="VersionInfo.cs" />

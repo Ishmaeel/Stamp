@@ -15,14 +15,14 @@ public class ModuleWeaver
     public string SolutionDirectoryPath { get; set; }
     public string AddinDirectoryPath { get; set; }
     public string AssemblyFilePath { get; set; }
+
+    public ISvnHelper SvnHelper { get; set; }
+
     static bool isPathSet;
     readonly FormatStringTokenResolver formatStringTokenResolver;
     string assemblyInfoVersion;
     Version assemblyVersion;
-    bool dotGitDirExists;
-
-    Assembly sharpSvn;
-    Assembly sharpSvnUI;
+    bool dotSvnDirExists;
 
     public ModuleWeaver()
     {
@@ -35,7 +35,6 @@ public class ModuleWeaver
 
     Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
     {
-        LogWarning("AssemblyResolve: " + args.Name);
         if (args.Name == "SharpSvn, Version=1.8003.2513.15185, Culture=neutral, PublicKeyToken=d729672594885a28")
         {
             LogWarning("Loading AssemblyResolve: " + args.Name);
@@ -53,32 +52,30 @@ public class ModuleWeaver
 
     public void Execute()
     {
-        LogWarning("In execute.");
+        if (SvnHelper == null)
+        {
+            SvnHelper = new SvnHelper();
+        }
 
         var customAttributes = ModuleDefinition.Assembly.CustomAttributes;
 
-        var svnDir = SvnDirFinder.TreeWalkForSvnDir(SolutionDirectoryPath);
+        var svnDir = SvnHelper.TreeWalkForSvnDir(SolutionDirectoryPath);
         if (svnDir == null)
         {
             LogWarning("No .svn directory found.");
             return;
         }
 
-        LogWarning(".svnDir found.");
-        LogWarning("Current dir: " + Environment.CurrentDirectory);
-
-        dotGitDirExists = true;
+        dotSvnDirExists = true;
 
         VersionInfo ver = null;
         try
         {
-            LogWarning("a1");
-            ver = GetSvnInfo(svnDir);
-            LogWarning("a2");
+            ver = SvnHelper.GetSvnInfo(svnDir);
         }
         catch (Exception ex)
         {
-            LogWarning("Svn error: " + ex.ToString());
+            LogWarning("GetSvnInfo error: " + ex.ToString());
         }
 
         LogWarning("svnInfo found.");
@@ -87,14 +84,10 @@ public class ModuleWeaver
 
         string assemblyVersionReplaced = ReplaceVersion3rd(assemblyVersion.ToString(), ver.Revision);
 
-        LogWarning("assemblyVersion found.");
-
         /* AssemblyVersionAttribute */
         var customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyVersionAttribute");
-        LogWarning("customAttribute found.");
         if (customAttribute != null)
         {
-            LogWarning("customAttribute not null.");
             assemblyInfoVersion = (string)customAttribute.ConstructorArguments[0].Value;
             assemblyInfoVersion = ReplaceVersion3rd(assemblyInfoVersion, ver.Revision);
             VerifyStartsWithVersion(assemblyInfoVersion);
@@ -102,7 +95,6 @@ public class ModuleWeaver
         }
         else
         {
-            LogWarning("customAttribute null.");
             var versionAttribute = GetVersionAttribute();
 
             if (versionAttribute == null)
@@ -123,8 +115,8 @@ public class ModuleWeaver
             customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
             customAttributes.Add(customAttribute);
         }
+        LogWarning("AssemblyVersionAttribute processed.");
 
-        LogWarning("PreAssemblyFileVersionAttribute");
         /* AssemblyFileVersionAttribute */
         customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyFileVersionAttribute");
         if (customAttribute != null)
@@ -149,7 +141,7 @@ public class ModuleWeaver
             customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
             customAttributes.Add(customAttribute);
         }
-        LogWarning("PostAssemblyFileVersionAttribute");
+        LogWarning("AssemblyFileVersionAttribute processed.");
 
         /* AssemblyInformationalVersionAttribute */
         customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyInformationalVersionAttribute");
@@ -176,6 +168,8 @@ public class ModuleWeaver
             customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
             customAttributes.Add(customAttribute);
         }
+
+        LogWarning("AssemblyInformationalVersionAttribute processed.");
     }
 
     private string ReplaceVersion3rd(string versionString, int rev)
@@ -202,73 +196,45 @@ public class ModuleWeaver
         }
     }
 
-    public static VersionInfo GetSvnInfo(string targetFolder)
+    TypeDefinition GetAttribute(string typeName)
     {
-        SvnWorkingCopyVersion version;
-        using (SvnWorkingCopyClient client = new SvnWorkingCopyClient())
+        var msCoreLib = ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
+        var msCoreAttribute = msCoreLib.MainModule.Types.FirstOrDefault(x => x.Name == typeName);
+        if (msCoreAttribute != null)
         {
-            client.GetVersion(targetFolder, out version);
+            return msCoreAttribute;
         }
-
-        SvnInfoEventArgs info;
-        using (SvnClient client = new SvnClient())
-        {
-            client.GetInfo(targetFolder, out info);
-        }
-
-        return new VersionInfo()
-        {
-            BranchName = info.Uri.AbsolutePath,
-            HasChanges = version.Modified,
-            Revision = (int)version.End,
-        };
+        var systemReflection = ModuleDefinition.AssemblyResolver.Resolve("System.Reflection");
+        return systemReflection.MainModule.Types.First(x => x.Name == typeName);
     }
 
     TypeDefinition GetInformationalVersionAttribute()
     {
-        var msCoreLib = ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
-        var msCoreAttribute = msCoreLib.MainModule.Types.FirstOrDefault(x => x.Name == "AssemblyInformationalVersionAttribute");
-        if (msCoreAttribute != null)
-        {
-            return msCoreAttribute;
-        }
-        var systemReflection = ModuleDefinition.AssemblyResolver.Resolve("System.Reflection");
-        return systemReflection.MainModule.Types.First(x => x.Name == "AssemblyInformationalVersionAttribute");
+        return GetAttribute("AssemblyInformationalVersionAttribute");
     }
 
     TypeDefinition GetFileVersionAttribute()
     {
-        var msCoreLib = ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
-        var msCoreAttribute = msCoreLib.MainModule.Types.FirstOrDefault(x => x.Name == "AssemblyFileVersionAttribute");
-        if (msCoreAttribute != null)
-        {
-            return msCoreAttribute;
-        }
-        var systemReflection = ModuleDefinition.AssemblyResolver.Resolve("System.Reflection");
-        return systemReflection.MainModule.Types.First(x => x.Name == "AssemblyFileVersionAttribute");
+        return GetAttribute("AssemblyFileVersionAttribute");
     }
 
     TypeDefinition GetVersionAttribute()
     {
-        var msCoreLib = ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
-        var msCoreAttribute = msCoreLib.MainModule.Types.FirstOrDefault(x => x.Name == "AssemblyVersionAttribute");
-        if (msCoreAttribute != null)
-        {
-            return msCoreAttribute;
-        }
-        var systemReflection = ModuleDefinition.AssemblyResolver.Resolve("System.Reflection");
-        return systemReflection.MainModule.Types.First(x => x.Name == "AssemblyVersionAttribute");
+        return GetAttribute("AssemblyVersionAttribute");
     }
 
     public void AfterWeaving()
     {
-        if (!dotGitDirExists)
+        if (!dotSvnDirExists)
         {
             return;
         }
+
         var verPatchPath = Path.Combine(AddinDirectoryPath, "verpatch.exe");
         var arguments = string.Format("{0} /pv \"{1}\" /high /va {2}", AssemblyFilePath, assemblyInfoVersion, assemblyVersion);
+
         LogInfo(string.Format("Patching version using: {0} {1}", verPatchPath, arguments));
+
         var startInfo = new ProcessStartInfo
                         {
                             FileName = verPatchPath,
@@ -279,6 +245,7 @@ public class ModuleWeaver
                             RedirectStandardError = true,
                             WorkingDirectory = Path.GetTempPath()
                         };
+
         using (var process = Process.Start(startInfo))
         {
             if (!process.WaitForExit(1000))
@@ -291,9 +258,11 @@ public class ModuleWeaver
             {
                 return;
             }
+
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             var message = string.Format("Failed to apply product version to Win32 resources.\r\nOutput: {0}\r\nError: {1}", output, error);
+
             throw new WeavingException(message);
         }
     }

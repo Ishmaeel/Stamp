@@ -30,6 +30,7 @@ public class TaskTests
                               AddinDirectoryPath = currentDirectory,
                               SolutionDirectoryPath = currentDirectory,
                               AssemblyFilePath = afterAssemblyPath,
+                              SvnHelper = new MockSvnHelper(),
                           };
 
         weavingTask.Execute();
@@ -44,7 +45,7 @@ public class TaskTests
     public void EnsureAttributeExists()
     {
         var customAttributes = (AssemblyInformationalVersionAttribute)assembly
-            .GetCustomAttributes(typeof (AssemblyInformationalVersionAttribute), false)
+            .GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false)
             .First();
         Assert.IsNotNullOrEmpty(customAttributes.InformationalVersion);
         Debug.WriteLine(customAttributes.InformationalVersion);

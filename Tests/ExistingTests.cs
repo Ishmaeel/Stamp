@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using LibGit2Sharp;
 using Mono.Cecil;
 using NUnit.Framework;
 
@@ -32,6 +31,7 @@ public class ExistingTests
                                AddinDirectoryPath = currentDirectory,
                                SolutionDirectoryPath = currentDirectory,
                                AssemblyFilePath = afterAssemblyPath,
+                               SvnHelper = new MockSvnHelper(),
                            };
 
         moduleWeaver.Execute();
@@ -45,34 +45,32 @@ public class ExistingTests
     [Test]
     public void EnsureAttributeExists()
     {
-        var customAttributes = (AssemblyInformationalVersionAttribute)assembly.GetCustomAttributes(typeof (AssemblyInformationalVersionAttribute), false).First();
+        var customAttributes = (AssemblyInformationalVersionAttribute)assembly.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false).First();
         Assert.IsNotNullOrEmpty(customAttributes.InformationalVersion);
         Debug.WriteLine(customAttributes.InformationalVersion);
     }
+
     [Test]
     public void Win32Resource()
     {
         var productVersion = FileVersionInfo.GetVersionInfo(afterAssemblyPath).ProductVersion;
 
-        using (var repo = new Repository(GitDirFinder.TreeWalkForGitDir(Environment.CurrentDirectory)))
-        {
-            var nameOfCurrentBranch = repo.Head.Name;
-            Assert.True(productVersion.StartsWith("1.0.0+" + nameOfCurrentBranch + "."));
-        }
-    }
+        var version = new MockSvnHelper().GetSvnInfo(Environment.CurrentDirectory);
 
+        var nameOfCurrentBranch = version.BranchName;
+        Assert.True(productVersion.Contains(nameOfCurrentBranch));
+    }
 
     [Test]
     public void TemplateIsReplaced()
     {
-        using (var repo = new Repository(GitDirFinder.TreeWalkForGitDir(Environment.CurrentDirectory)))
-        {
-            var nameOfCurrentBranch = repo.Head.Name;
-            
-            var customAttributes = (AssemblyInformationalVersionAttribute)assembly.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false)
+        var version = new MockSvnHelper().GetSvnInfo(Environment.CurrentDirectory);
+
+        var nameOfCurrentBranch = version.BranchName;
+
+        var customAttributes = (AssemblyInformationalVersionAttribute)assembly.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false)
                 .First();
-            Assert.True(customAttributes.InformationalVersion.StartsWith("1.0.0+"+nameOfCurrentBranch+"."));
-        }
+        Assert.True(customAttributes.InformationalVersion.Contains(nameOfCurrentBranch));
     }
 
 
