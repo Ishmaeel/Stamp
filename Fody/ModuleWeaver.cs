@@ -29,16 +29,31 @@ public class ModuleWeaver
         LogInfo = s => { };
         LogWarning = s => { };
         formatStringTokenResolver = new FormatStringTokenResolver();
+
+        AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+    }
+
+    Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+    {
+        LogWarning("AssemblyResolve: " + args.Name);
+        if (args.Name == "SharpSvn, Version=1.8003.2513.15185, Culture=neutral, PublicKeyToken=d729672594885a28")
+        {
+            LogWarning("Loading AssemblyResolve: " + args.Name);
+
+            var sharpSvnPath = Path.Combine(AddinDirectoryPath, "SharpSvn.dll");
+            var asm = Assembly.LoadFrom(sharpSvnPath);
+
+            LogWarning("Loaded AssemblyResolve: " + args.Name);
+
+            return asm;
+        }
+
+        return null;
     }
 
     public void Execute()
     {
         LogWarning("In execute.");
-
-        var sharpSvnPath = Path.Combine(AddinDirectoryPath, "SharpSvn.dll");
-        var asm = Assembly.LoadFrom(sharpSvnPath);
-
-        LogWarning("Assembly: " + asm.GetName().Version);
 
         var customAttributes = ModuleDefinition.Assembly.CustomAttributes;
 
@@ -166,7 +181,7 @@ public class ModuleWeaver
     private string ReplaceVersion3rd(string versionString, int rev)
     {
         Version fake;
-        if (!Version.TryParse(assemblyInfoVersion, out fake))
+        if (!Version.TryParse(versionString, out fake))
         {
             throw new WeavingException("The version string must be prefixed with a valid Version. The following string does not: " + versionString);
         }
@@ -182,7 +197,8 @@ public class ModuleWeaver
         Version fake;
         if (!Version.TryParse(prefix, out fake))
         {
-            throw new WeavingException("The version string must be prefixed with a valid Version. The following string does not: " + versionString);
+            throw new WeavingException("The version string must be prefixed with a valid Version. The following string does not:  " + versionString
+                + " prefix: " + prefix);
         }
     }
 
