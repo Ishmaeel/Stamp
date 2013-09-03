@@ -159,11 +159,19 @@ public class ModuleWeaver
             customAttribute = new CustomAttribute(constructor);
             if (!ver.HasChanges)
             {
-                assemblyInfoVersion = string.Format("{0} Path:'{1}' Rev:{2}", assemblyVersionReplaced, ver.BranchName, ver.Revision);
+                assemblyInfoVersion = string.Format("{0} {1} Path:'{2}' r{3}",
+                    assemblyVersionReplaced, 
+                    Environment.MachineName, 
+                    ver.BranchName,
+                    ver.Revision);
             }
             else
             {
-                assemblyInfoVersion = string.Format("{0} Path:'{1}' Rev:{2} HasPendingChanges", assemblyVersionReplaced, ver.BranchName, ver.Revision);
+                assemblyInfoVersion = string.Format("{0} {1} Path:'{2}' r{3} HasChanges", 
+                    assemblyVersionReplaced,
+                    Environment.MachineName, 
+                    ver.BranchName,
+                    ver.Revision);
             }
             customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
             customAttributes.Add(customAttribute);
