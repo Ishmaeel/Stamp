@@ -29,32 +29,17 @@ public class ModuleWeaver
         LogInfo = s => { };
         LogWarning = s => { };
         formatStringTokenResolver = new FormatStringTokenResolver();
-
-        LogWarning(sharpSvn.FullName);
-        LogWarning(sharpSvnUI.FullName);        
-
-        AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-    }
-
-    System.Reflection.Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
-    {
-        sharpSvn = typeof(SharpSvn.SvnWorkingCopyClient).Assembly;
-        sharpSvnUI = typeof(SharpSvn.UI.SvnUI).Assembly;
-
-        LogWarning(args.Name);
-
-        if (sharpSvn != null && args.Name == sharpSvn.FullName)
-            return sharpSvn;
-
-        if (sharpSvnUI != null && args.Name == sharpSvnUI.FullName)
-            return sharpSvnUI;
-
-        return null;
     }
 
     public void Execute()
-    {        
-        SetSearchPath();
+    {
+        LogWarning("In execute.");
+
+        var sharpSvnPath = Path.Combine(AddinDirectoryPath, "SharpSvn.dll");
+        var asm = Assembly.LoadFrom(sharpSvnPath);
+
+        LogWarning("Assembly: " + asm.GetName().Version);
+
         var customAttributes = ModuleDefinition.Assembly.CustomAttributes;
 
         var svnDir = SvnDirFinder.TreeWalkForSvnDir(SolutionDirectoryPath);
@@ -63,25 +48,38 @@ public class ModuleWeaver
             LogWarning("No .svn directory found.");
             return;
         }
+
+        LogWarning(".svnDir found.");
+        LogWarning("Current dir: " + Environment.CurrentDirectory);
+
         dotGitDirExists = true;
 
         VersionInfo ver = null;
         try
         {
+            LogWarning("a1");
             ver = GetSvnInfo(svnDir);
+            LogWarning("a2");
         }
         catch (Exception ex)
         {
             LogWarning("Svn error: " + ex.ToString());
         }
 
+        LogWarning("svnInfo found.");
 
         assemblyVersion = ModuleDefinition.Assembly.Name.Version;
 
+        string assemblyVersionReplaced = ReplaceVersion3rd(assemblyVersion.ToString(), ver.Revision);
+
+        LogWarning("assemblyVersion found.");
+
         /* AssemblyVersionAttribute */
         var customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyVersionAttribute");
+        LogWarning("customAttribute found.");
         if (customAttribute != null)
         {
+            LogWarning("customAttribute not null.");
             assemblyInfoVersion = (string)customAttribute.ConstructorArguments[0].Value;
             assemblyInfoVersion = ReplaceVersion3rd(assemblyInfoVersion, ver.Revision);
             VerifyStartsWithVersion(assemblyInfoVersion);
@@ -89,17 +87,29 @@ public class ModuleWeaver
         }
         else
         {
+            LogWarning("customAttribute null.");
             var versionAttribute = GetVersionAttribute();
+
+            if (versionAttribute == null)
+            {
+                throw new InvalidOperationException("versionAttribute not found.");
+            }
+
             var constructor = ModuleDefinition.Import(versionAttribute.Methods.First(x => x.IsConstructor));
+
             customAttribute = new CustomAttribute(constructor);
 
-            assemblyInfoVersion = (string)customAttribute.ConstructorArguments[0].Value;
+            assemblyInfoVersion = customAttribute.ConstructorArguments.Count == 1
+                ? (string)customAttribute.ConstructorArguments[0].Value
+                : assemblyVersion.ToString();
+
             assemblyInfoVersion = ReplaceVersion3rd(assemblyInfoVersion, ver.Revision);
 
             customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
             customAttributes.Add(customAttribute);
         }
 
+        LogWarning("PreAssemblyFileVersionAttribute");
         /* AssemblyFileVersionAttribute */
         customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyFileVersionAttribute");
         if (customAttribute != null)
@@ -111,16 +121,20 @@ public class ModuleWeaver
         }
         else
         {
-            var versionAttribute = GetVersionAttribute();
+            var versionAttribute = GetFileVersionAttribute();
             var constructor = ModuleDefinition.Import(versionAttribute.Methods.First(x => x.IsConstructor));
             customAttribute = new CustomAttribute(constructor);
 
-            assemblyInfoVersion = (string)customAttribute.ConstructorArguments[0].Value;
+            assemblyInfoVersion = customAttribute.ConstructorArguments.Count == 1
+                ? (string)customAttribute.ConstructorArguments[0].Value
+                : assemblyVersion.ToString();
+
             assemblyInfoVersion = ReplaceVersion3rd(assemblyInfoVersion, ver.Revision);
 
             customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
             customAttributes.Add(customAttribute);
         }
+        LogWarning("PostAssemblyFileVersionAttribute");
 
         /* AssemblyInformationalVersionAttribute */
         customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyInformationalVersionAttribute");
@@ -133,22 +147,20 @@ public class ModuleWeaver
         }
         else
         {
-            var versionAttribute = GetVersionAttribute();
+            var versionAttribute = GetInformationalVersionAttribute();
             var constructor = ModuleDefinition.Import(versionAttribute.Methods.First(x => x.IsConstructor));
             customAttribute = new CustomAttribute(constructor);
             if (!ver.HasChanges)
             {
-                assemblyInfoVersion = string.Format("{0} Path:'{1}' Rev:{2}", assemblyVersion, ver.BranchName, ver.Revision);
+                assemblyInfoVersion = string.Format("{0} Path:'{1}' Rev:{2}", assemblyVersionReplaced, ver.BranchName, ver.Revision);
             }
             else
             {
-                assemblyInfoVersion = string.Format("{0} Path:'{1}' Rev:{2} HasPendingChanges", assemblyVersion, ver.BranchName, ver.Revision);
+                assemblyInfoVersion = string.Format("{0} Path:'{1}' Rev:{2} HasPendingChanges", assemblyVersionReplaced, ver.BranchName, ver.Revision);
             }
             customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
             customAttributes.Add(customAttribute);
         }
-
-
     }
 
     private string ReplaceVersion3rd(string versionString, int rev)
@@ -174,7 +186,7 @@ public class ModuleWeaver
         }
     }
 
-    static VersionInfo GetSvnInfo(string targetFolder)
+    public static VersionInfo GetSvnInfo(string targetFolder)
     {
         SvnWorkingCopyVersion version;
         using (SvnWorkingCopyClient client = new SvnWorkingCopyClient())
@@ -196,29 +208,7 @@ public class ModuleWeaver
         };
     }
 
-    void SetSearchPath()
-    {
-        if (isPathSet)
-        {
-            return;
-        }
-        isPathSet = true;
-        var nativeBinaries = Path.Combine(AddinDirectoryPath, "NativeBinaries", GetProcessorArchitecture());
-        var existingPath = Environment.GetEnvironmentVariable("PATH");
-        var newPath = string.Concat(nativeBinaries, Path.PathSeparator, existingPath);
-        Environment.SetEnvironmentVariable("PATH", newPath);
-    }
-
-    static string GetProcessorArchitecture()
-    {
-        if (Environment.Is64BitProcess)
-        {
-            return "amd64";
-        }
-        return "x86";
-    }
-
-    TypeDefinition GetVersionAttribute()
+    TypeDefinition GetInformationalVersionAttribute()
     {
         var msCoreLib = ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
         var msCoreAttribute = msCoreLib.MainModule.Types.FirstOrDefault(x => x.Name == "AssemblyInformationalVersionAttribute");
@@ -226,8 +216,32 @@ public class ModuleWeaver
         {
             return msCoreAttribute;
         }
-        var systemRuntime = ModuleDefinition.AssemblyResolver.Resolve("System.Runtime");
-        return systemRuntime.MainModule.Types.First(x => x.Name == "AssemblyInformationalVersionAttribute");
+        var systemReflection = ModuleDefinition.AssemblyResolver.Resolve("System.Reflection");
+        return systemReflection.MainModule.Types.First(x => x.Name == "AssemblyInformationalVersionAttribute");
+    }
+
+    TypeDefinition GetFileVersionAttribute()
+    {
+        var msCoreLib = ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
+        var msCoreAttribute = msCoreLib.MainModule.Types.FirstOrDefault(x => x.Name == "AssemblyFileVersionAttribute");
+        if (msCoreAttribute != null)
+        {
+            return msCoreAttribute;
+        }
+        var systemReflection = ModuleDefinition.AssemblyResolver.Resolve("System.Reflection");
+        return systemReflection.MainModule.Types.First(x => x.Name == "AssemblyFileVersionAttribute");
+    }
+
+    TypeDefinition GetVersionAttribute()
+    {
+        var msCoreLib = ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
+        var msCoreAttribute = msCoreLib.MainModule.Types.FirstOrDefault(x => x.Name == "AssemblyVersionAttribute");
+        if (msCoreAttribute != null)
+        {
+            return msCoreAttribute;
+        }
+        var systemReflection = ModuleDefinition.AssemblyResolver.Resolve("System.Reflection");
+        return systemReflection.MainModule.Types.First(x => x.Name == "AssemblyVersionAttribute");
     }
 
     public void AfterWeaving()

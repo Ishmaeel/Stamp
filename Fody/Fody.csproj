@@ -56,11 +56,13 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Lib\Cecil\Mono.Cecil.Rocks.dll</HintPath>
     </Reference>
-    <Reference Include="SharpSvn">
-      <HintPath>..\packages\SharpSvn.1.8-x64.1.8003.2513\lib\net20\SharpSvn.dll</HintPath>
+    <Reference Include="SharpSvn, Version=1.8003.2513.15185, Culture=neutral, PublicKeyToken=d729672594885a28, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\SharpSvn.1.8-x86.1.8003.2513\lib\net20\SharpSvn.dll</HintPath>
     </Reference>
-    <Reference Include="SharpSvn.UI">
-      <HintPath>..\packages\SharpSvn.1.8-x64.1.8003.2513\lib\net20\SharpSvn.UI.dll</HintPath>
+    <Reference Include="SharpSvn.UI, Version=1.8003.2513.15185, Culture=neutral, PublicKeyToken=33789aa53ca44aa9, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\SharpSvn.1.8-x86.1.8003.2513\lib\net20\SharpSvn.UI.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

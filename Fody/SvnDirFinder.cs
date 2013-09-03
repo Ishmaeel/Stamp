@@ -10,7 +10,7 @@ public class SvnDirFinder
             var svnDir = Path.Combine(currentDirectory, @".svn");
             if (Directory.Exists(svnDir))
             {
-                return svnDir;
+                return currentDirectory;
             }
             try
             {
