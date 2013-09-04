@@ -21,7 +21,11 @@ public class ModuleWeaver
     static bool isPathSet;
     readonly FormatStringTokenResolver formatStringTokenResolver;
     string assemblyInfoVersion;
+    
     Version assemblyVersion;
+
+    string assemblyVersionReplaced;
+
     bool dotSvnDirExists;
 
     public ModuleWeaver()
@@ -82,7 +86,7 @@ public class ModuleWeaver
 
         assemblyVersion = ModuleDefinition.Assembly.Name.Version;
 
-        string assemblyVersionReplaced = ReplaceVersion3rd(assemblyVersion.ToString(), ver.Revision);
+        assemblyVersionReplaced = ReplaceVersion3rd(assemblyVersion.ToString(), ver.Revision);
 
         /* AssemblyVersionAttribute */
         var customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyVersionAttribute");
@@ -239,7 +243,7 @@ public class ModuleWeaver
         }
 
         var verPatchPath = Path.Combine(AddinDirectoryPath, "verpatch.exe");
-        var arguments = string.Format("{0} /pv \"{1}\" /high /va {2}", AssemblyFilePath, assemblyInfoVersion, assemblyVersion);
+        var arguments = string.Format("{0} /pv \"{1}\" /high /va {2}", AssemblyFilePath, assemblyInfoVersion, assemblyVersionReplaced);
 
         LogInfo(string.Format("Patching version using: {0} {1}", verPatchPath, arguments));
 
