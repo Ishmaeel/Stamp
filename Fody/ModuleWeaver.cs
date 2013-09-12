@@ -21,7 +21,7 @@ public class ModuleWeaver
     static bool isPathSet;
     readonly FormatStringTokenResolver formatStringTokenResolver;
     string assemblyInfoVersion;
-    
+
     Version assemblyVersion;
 
     string assemblyVersionReplaced;
@@ -82,7 +82,7 @@ public class ModuleWeaver
             LogWarning("GetSvnInfo error: " + ex.ToString());
         }
 
-        LogWarning("svnInfo found.");
+        LogInfo("svnInfo found.");
 
         assemblyVersion = ModuleDefinition.Assembly.Name.Version;
 
@@ -119,7 +119,7 @@ public class ModuleWeaver
             customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
             customAttributes.Add(customAttribute);
         }
-        LogWarning("AssemblyVersionAttribute processed.");
+        LogInfo("AssemblyVersionAttribute processed.");
 
         /* AssemblyFileVersionAttribute */
         customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyFileVersionAttribute");
@@ -145,7 +145,7 @@ public class ModuleWeaver
             customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
             customAttributes.Add(customAttribute);
         }
-        LogWarning("AssemblyFileVersionAttribute processed.");
+        LogInfo("AssemblyFileVersionAttribute processed.");
 
         /* AssemblyInformationalVersionAttribute */
         customAttribute = customAttributes.FirstOrDefault(x => x.AttributeType.Name == "AssemblyInformationalVersionAttribute");
@@ -164,16 +164,16 @@ public class ModuleWeaver
             if (!ver.HasChanges)
             {
                 assemblyInfoVersion = string.Format("{0} {1} Path:'{2}' r{3}",
-                    assemblyVersionReplaced, 
-                    Environment.MachineName, 
+                    assemblyVersionReplaced,
+                    Environment.MachineName,
                     ver.BranchName,
                     ver.Revision);
             }
             else
             {
-                assemblyInfoVersion = string.Format("{0} {1} Path:'{2}' r{3} HasChanges", 
+                assemblyInfoVersion = string.Format("{0} {1} Path:'{2}' r{3} HasChanges",
                     assemblyVersionReplaced,
-                    Environment.MachineName, 
+                    Environment.MachineName,
                     ver.BranchName,
                     ver.Revision);
             }
@@ -181,7 +181,7 @@ public class ModuleWeaver
             customAttributes.Add(customAttribute);
         }
 
-        LogWarning("AssemblyInformationalVersionAttribute processed.");
+        LogInfo(string.Format("AssemblyInformationalVersionAttribute processed: {0}", assemblyInfoVersion));
     }
 
     private string ReplaceVersion3rd(string versionString, int rev)
@@ -243,7 +243,7 @@ public class ModuleWeaver
         }
 
         var verPatchPath = Path.Combine(AddinDirectoryPath, "verpatch.exe");
-        var arguments = string.Format("{0} /pv \"{1}\" /high /va {2}", AssemblyFilePath, assemblyInfoVersion, assemblyVersionReplaced);
+        var arguments = string.Format("{0} /pv \"{1}\" /high /va {2}", AssemblyFilePath, assemblyVersionReplaced, assemblyVersionReplaced);
 
         LogInfo(string.Format("Patching version using: {0} {1}", verPatchPath, arguments));
 
