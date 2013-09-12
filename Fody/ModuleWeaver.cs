@@ -41,12 +41,12 @@ public class ModuleWeaver
     {
         if (args.Name == "SharpSvn, Version=1.8003.2513.15185, Culture=neutral, PublicKeyToken=d729672594885a28")
         {
-            LogWarning("Loading AssemblyResolve: " + args.Name);
+            LogInfo("Loading AssemblyResolve Name: " + args.Name);
 
             var sharpSvnPath = Path.Combine(AddinDirectoryPath, "SharpSvn.dll");
             var asm = Assembly.LoadFrom(sharpSvnPath);
 
-            LogWarning("Loaded AssemblyResolve: " + args.Name);
+            LogInfo("Loaded AssemblyResolve FullName: " + asm.FullName);
 
             return asm;
         }
@@ -243,7 +243,7 @@ public class ModuleWeaver
         }
 
         var verPatchPath = Path.Combine(AddinDirectoryPath, "verpatch.exe");
-        var arguments = string.Format("{0} /pv \"{1}\" /high /va {2}", AssemblyFilePath, assemblyVersionReplaced, assemblyVersionReplaced);
+        var arguments = string.Format("\"{0}\" /pv \"{1}\" /high /va {2}", AssemblyFilePath, assemblyInfoVersion, assemblyVersionReplaced);
 
         LogInfo(string.Format("Patching version using: {0} {1}", verPatchPath, arguments));
 
