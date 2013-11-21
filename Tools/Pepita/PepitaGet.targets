@@ -4,12 +4,12 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildProjectDirectory)\..\</SolutionDir>
   </PropertyGroup>
 
-	<UsingTask TaskName="PepitaGetRestorePackagesTask" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll">
+	<UsingTask TaskName="PepitaGetRestorePackagesTask" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v12.0.dll">
 		<Task>
 
 			<Reference Include="Microsoft.Build.Framework" />
-			<Reference Include="Microsoft.Build.Utilities.v4.0" />
-			<Reference Include="Microsoft.Build.Tasks.v4.0" />
+			<Reference Include="Microsoft.Build.Utilities.v12.0" />
+			<Reference Include="Microsoft.Build.Tasks.v12.0" />
 			<Reference Include="Microsoft.CSharp" />
 
 			<Code Type="Class" Language="cs">

@@ -2,7 +2,7 @@
 
 ### This is an add-in for [Fody](https://github.com/Fody/Fody/) 
 
-Stamps an assembly with svn data.
+Stamps an assembly with svn data. SVN 1.7 and SVN 1.8 repository formats are supported.
 
 ### Nuget package
 

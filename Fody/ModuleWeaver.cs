@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Mono.Cecil;
-using SharpSvn;
 using System.Collections.ObjectModel;
 using System.Reflection;
 
@@ -40,6 +39,17 @@ public class ModuleWeaver
     Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
     {
         if (args.Name == "SharpSvn, Version=1.8003.2513.15185, Culture=neutral, PublicKeyToken=d729672594885a28")
+        {
+            LogInfo("Loading AssemblyResolve Name: " + args.Name);
+
+            var sharpSvnPath = Path.Combine(AddinDirectoryPath, "SharpSvn18.dll");
+            var asm = Assembly.LoadFrom(sharpSvnPath);
+
+            LogInfo("Loaded AssemblyResolve FullName: " + asm.FullName);
+
+            return asm;
+        }
+        else if (args.Name == "SharpSvn, Version=1.7013.2566.15257, Culture=neutral, PublicKeyToken=d729672594885a28")
         {
             LogInfo("Loading AssemblyResolve Name: " + args.Name);
 

@@ -53,11 +53,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NUnit.2.6.2\lib\nunit.framework.dll</HintPath>
     </Reference>
-    <Reference Include="SharpSvn">
-      <HintPath>..\packages\SharpSvn.1.8-x86.1.8003.2513\lib\net20\SharpSvn.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpSvn.UI">
-      <HintPath>..\packages\SharpSvn.1.8-x86.1.8003.2513\lib\net20\SharpSvn.UI.dll</HintPath>
+    <Reference Include="SharpSvn18">
+      <HintPath>..\Lib\SharpSvn.1.8-x86.1.8003.2513\lib\net20\SharpSvn18.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
