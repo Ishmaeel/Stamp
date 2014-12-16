@@ -106,6 +106,8 @@ public class ModuleWeaver
             assemblyInfoVersion = ReplaceVersion3rd(assemblyInfoVersion, ver.Revision);
             VerifyStartsWithVersion(assemblyInfoVersion);
             customAttribute.ConstructorArguments[0] = new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion);
+            
+            ModuleDefinition.Assembly.Name.Version = new Version(assemblyInfoVersion);
         }
         else
         {
@@ -126,8 +128,7 @@ public class ModuleWeaver
 
             assemblyInfoVersion = ReplaceVersion3rd(assemblyInfoVersion, ver.Revision);
 
-            customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(ModuleDefinition.TypeSystem.String, assemblyInfoVersion));
-            customAttributes.Add(customAttribute);
+            ModuleDefinition.Assembly.Name.Version = new Version(assemblyInfoVersion);
         }
         LogInfo("AssemblyVersionAttribute processed.");
 
