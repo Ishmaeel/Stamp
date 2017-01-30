@@ -5,6 +5,7 @@ using System.Linq;
 using Mono.Cecil;
 using System.Collections.ObjectModel;
 using System.Reflection;
+using System.Xml.Linq;
 
 public class ModuleWeaver
 {
@@ -246,6 +247,28 @@ public class ModuleWeaver
         return GetAttribute("AssemblyVersionAttribute");
     }
 
+    public XElement Config { get; set; }
+
+    int? GetVerPatchWaitTimeout()
+    {
+        if (Config == null)
+        {
+            return null;
+        }
+        var xAttributes = Config.Attributes();
+        var timeoutSetting = xAttributes.FirstOrDefault(attr => attr.Name.LocalName == "VerPatchWaitTimeoutInMilliseconds");
+        if (timeoutSetting == null)
+        {
+            return null;
+        }
+        int timeoutInMilliseconds;
+        if (int.TryParse(timeoutSetting.Value, out timeoutInMilliseconds) && timeoutInMilliseconds > 0)
+        {
+            return timeoutInMilliseconds;
+        }
+        return null;
+    }
+
     public void AfterWeaving()
     {
         if (!dotSvnDirExists)
@@ -271,9 +294,12 @@ public class ModuleWeaver
 
         using (var process = Process.Start(startInfo))
         {
-            if (!process.WaitForExit(1000))
+            var waitTimeoutInMilliseconds = GetVerPatchWaitTimeout().GetValueOrDefault(1000);
+            LogInfo(string.Format("Waiting {0} ms while verpatch.exe is processing assembly", waitTimeoutInMilliseconds));
+
+            if (!process.WaitForExit(waitTimeoutInMilliseconds))
             {
-                var timeoutMessage = string.Format("Failed to apply product version to Win32 resources in 1 second.\r\nFailed command: {0} {1}", verPatchPath, arguments);
+                var timeoutMessage = string.Format("Failed to apply product version to Win32 resources in a timely manner.\r\nFailed command: {0} {1}", verPatchPath, arguments);
                 throw new WeavingException(timeoutMessage);
             }
 
