@@ -18,7 +18,6 @@ public class ModuleWeaver
 
     public ISvnHelper SvnHelper { get; set; }
 
-    static bool isPathSet;
     readonly FormatStringTokenResolver formatStringTokenResolver;
     string assemblyInfoVersion;
 

@@ -27,9 +27,8 @@ public class SvnHelper : ISvnHelper
         {
             return svn18.GetSvnInfo(targetFolder);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-
         }
 
         // lame.
