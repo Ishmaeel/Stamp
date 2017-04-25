@@ -32,8 +32,7 @@
     <MakeDir Directories="$(SolutionDir)NuGetBuild" />
     
     <Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\StampSvn.Fody.dll" DestinationFolder="$(SolutionDir)NuGetBuild" />
-    <Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\SharpSvn.dll" DestinationFolder="$(SolutionDir)NuGetBuild" />
-    <Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\SharpSvn.UI.dll" DestinationFolder="$(SolutionDir)NuGetBuild" />
+    <Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\SharpSvn18.dll" DestinationFolder="$(SolutionDir)NuGetBuild" />
     <Copy SourceFiles="$(SolutionDir)Fody\bin\$(ConfigurationName)\SharpPlink-Win32.svnExe" DestinationFolder="$(SolutionDir)NuGetBuild" />
 
     <Copy SourceFiles="$(SolutionDir)Lib\Verpatch\verpatch.exe" DestinationFolder="$(SolutionDir)NuGetBuild\" />
